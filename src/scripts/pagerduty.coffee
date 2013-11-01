@@ -4,6 +4,7 @@
 # Commands:
 #
 #   hubot who's on call - return the username of who's on call
+#   hubot who's next on call - return the username of who is on call a week from now
 #   hubot pager me trigger <msg> - create a new incident with <msg>
 #   hubot pager me 60 - take the pager for 60 minutes
 #   hubot pager me as <email> - remember your pager email is <email>
@@ -201,6 +202,11 @@ module.exports = (robot) ->
     withCurrentOncall msg, (username) ->
       msg.reply "#{username} is on call"
 
+  # who is on call next?
+  robot.respond /who('s|s| is)? next (on call|oncall)/i, (msg) ->
+    withNextOncall msg, (usernameNext) ->
+      msg.reply "#{usernameNext} is on call next"
+
   parseIncidentNumbers = (match) ->
     match.split(/[ ,]+/).map (incidentNumber) ->
       parseInt(incidentNumber)
@@ -299,6 +305,20 @@ module.exports = (robot) ->
     query = {
       since: now,
       until: oneHour,
+      overflow: 'true'
+    }
+    pagerDutyGet msg, "/schedules/#{pagerDutyScheduleId}/entries", query, (json) ->
+      if json.entries and json.entries.length > 0
+        cb(json.entries[0].user.name)
+
+  withNextOncall = (msg, cb) ->
+    oneHour = moment().add('hours', 1).format()
+    oneWeek = moment().add('days', 7).format()
+    now = moment().format()
+
+    query = {
+      since: oneWeek,
+      until: oneWeek,
       overflow: 'true'
     }
     pagerDutyGet msg, "/schedules/#{pagerDutyScheduleId}/entries", query, (json) ->
